@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multimodal Breast Cancer Classification System</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  </head>
+  <body>
+    <div class="app" id="app">
+      <div class="header">
+        <div class="header-left">
+          <div class="logo">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M12 2a9 9 0 1 0 9 9A9 9 0 0 0 12 2zm0 16.5A7.5 7.5 0 1 1 19.5 11 7.51 7.51 0 0 1 12 18.5zm.75-9.75a.75.75 0 0 0-1.5 0v3a.75.75 0 0 0 .22.53l2.25 2.25a.75.75 0 1 0 1.06-1.06l-2.03-2.03V8.75z"
+              />
+            </svg>
+          </div>
+          <div class="brand">
+            <h1>Multimodal Breast Cancer Classification System</h1>
+            <p>ResNet-18/50</p>
+          </div>
+        </div>
+        <div class="header-right">
+          <span class="badge active">● System Online</span>
+          <span class="badge model">ResNet-18</span>
+          <button class="theme-btn" onclick="toggleTheme()">◑ Theme</button>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" onclick="showTab('predict', this)">
+          🔬 Prediction
+        </button>
+        <button class="tab" onclick="showTab('analytics', this)">
+          📊 Analytics
+        </button>
+        <button class="tab" onclick="showTab('history', this)">
+          📋 History
+        </button>
+        <button class="tab" onclick="showTab('report', this)">
+          📄 Export Report
+        </button>
+      </div>
+
+      <div id="tab-predict" class="fade-in">
+        <div class="grid2" style="margin-bottom: 16px">
+          <div class="card">
+            <div class="card-title">🩻 Mammogram Image (DM)</div>
+            <div
+              class="upload-zone"
+              id="dz-mammo"
+              ondragover="doDrag(event, 'dz-mammo')"
+              ondragleave="doDragLeave('dz-mammo')"
+              ondrop="doDrop(event, 'mammo')"
+            >
+              <input
+                type="file"
+                accept="image/*"
+                id="inp-mammo"
+                onchange="handleFile(event, 'mammo')"
+              />
+              <div class="upload-icon">🩻</div>
+              <h3>Drop mammogram here</h3>
+              <p>PNG, JPG — drag &amp; drop or click to browse</p>
+            </div>
+            <img
+              id="preview-mammo"
+              class="preview-img"
+              style="display: none"
+              alt="Mammogram preview"
+            />
+            <p id="fname-mammo" class="fname"></p>
+          </div>
+
+          <div class="card">
+            <div class="card-title">🔊 Ultrasound Image (BUS)</div>
+            <div
+              class="upload-zone"
+              id="dz-us"
+              ondragover="doDrag(event, 'dz-us')"
+              ondragleave="doDragLeave('dz-us')"
+              ondrop="doDrop(event, 'us')"
+            >
+              <input
+                type="file"
+                accept="image/*"
+                id="inp-us"
+                onchange="handleFile(event, 'us')"
+              />
+              <div class="upload-icon">🔊</div>
+              <h3>Drop ultrasound here</h3>
+              <p>PNG, JPG — drag &amp; drop or click to browse</p>
+            </div>
+            <img
+              id="preview-us"
+              class="preview-img"
+              style="display: none"
+              alt="Ultrasound preview"
+            />
+            <p id="fname-us" class="fname"></p>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 16px">
+          <div class="card-title">👤 Patient Information</div>
+          <div class="grid3">
+            <div class="field">
+              <label>Patient ID</label>
+              <input type="text" id="pid" placeholder="e.g. PT-00421" />
+            </div>
+            <div class="field">
+              <label>Age</label>
+              <input type="number" id="page" placeholder="e.g. 52" />
+            </div>
+            <div class="field">
+              <label>Fusion Weight (w₁ for Mammography)</label>
+              <div class="slider-row">
+                <input
+                  type="range"
+                  id="fw"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value="0.5"
+                  oninput="
+                    document.getElementById('fw-val').textContent = parseFloat(
+                      this.value,
+                    ).toFixed(2)
+                  "
+                />
+                <span id="fw-val" class="slider-val">0.50</span>
+              </div>
+              <p class="field-hint">fused = w₁ × mammo + (1−w₁) × ultrasound</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 16px">
+          <button
+            class="btn btn-primary btn-full"
+            id="predict-btn"
+            onclick="runPrediction()"
+            style="max-width: 360px"
+          >
+            <span id="btn-icon">🧠</span>
+            <span id="btn-text">Run Multimodal Prediction</span>
+          </button>
+        </div>
+
+        <div id="result-area" style="display: none" class="fade-in">
+          <div class="result-card" id="result-card">
+            <div class="result-header">
+              <div>
+                <div class="result-subtitle">Final Diagnosis</div>
+                <div class="result-label" id="result-label">BENIGN</div>
+              </div>
+              <div style="text-align: right">
+                <div class="result-subtitle">Confidence</div>
+                <div class="conf-score" id="conf-score">—</div>
+              </div>
+            </div>
+            <div class="progress-row">
+              <span class="progress-label">Benign</span>
+              <div class="progress-track">
+                <div
+                  class="progress-fill fill-green"
+                  id="bar-benign"
+                  style="width: 0%"
+                ></div>
+              </div>
+              <span class="progress-val" id="val-benign">0%</span>
+            </div>
+            <div class="progress-row">
+              <span class="progress-label">Malignant</span>
+              <div class="progress-track">
+                <div
+                  class="progress-fill fill-red"
+                  id="bar-malignant"
+                  style="width: 0%"
+                ></div>
+              </div>
+              <span class="progress-val" id="val-malignant">0%</span>
+            </div>
+            <div class="ai-explanation" id="ai-explanation"></div>
+          </div>
+
+          <div class="grid2" style="margin-top: 16px">
+            <div class="card">
+              <div class="card-title">📊 Modality Scores Comparison</div>
+              <div class="chart-wrap" style="height: 200px">
+                <canvas
+                  id="modalityChart"
+                  role="img"
+                  aria-label="Bar chart comparing mammography, ultrasound and fusion scores"
+                ></canvas>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">🎯 Fused Prediction Distribution</div>
+              <div class="chart-wrap" style="height: 200px">
+                <canvas
+                  id="fusionChart"
+                  role="img"
+                  aria-label="Donut chart showing final fused prediction probabilities"
+                ></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-analytics" style="display: none" class="fade-in">
+        <div class="metrics-row">
+          <div class="metric-box">
+            <div class="metric-val">0.9891</div>
+            <div class="metric-lbl">Fusion AUC</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-val">96.15%</div>
+            <div class="metric-lbl">Accuracy</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-val">91.67%</div>
+            <div class="metric-lbl">Sensitivity</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-val">97.87%</div>
+            <div class="metric-lbl">Specificity</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-val">0.9296</div>
+            <div class="metric-lbl">F1-Score</div>
+          </div>
+        </div>
+
+        <div class="grid2" style="margin-bottom: 16px">
+          <div class="card">
+            <div class="card-title">📉 Training Loss Curves</div>
+            <div class="chart-wrap">
+              <canvas
+                id="lossChart"
+                role="img"
+                aria-label="Training loss over 15 epochs for both models"
+              ></canvas>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">📈 Training Accuracy Curves</div>
+            <div class="chart-wrap">
+              <canvas
+                id="accChart"
+                role="img"
+                aria-label="Training accuracy over 15 epochs for both models"
+              ></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 16px">
+          <div class="card-title">⚖️ AUC vs Fusion Weight Sweep (w₁)</div>
+          <p style="font-size: 11px; color: var(--text3); margin-bottom: 12px">
+            Optimal weight highlighted — best AUC achieved at w₁=0.50
+          </p>
+          <div id="sweep-bars"></div>
+        </div>
+
+        <div class="card" style="margin-bottom: 16px">
+          <div class="card-title">📐 Combined ROC Curves</div>
+          <div class="chart-wrap" style="height: 300px">
+            <canvas
+              id="rocChart"
+              role="img"
+              aria-label="ROC curves for DM AUC 0.9839, BUS AUC 0.9285, and Multimodal Fusion AUC 0.9891"
+            ></canvas>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 16px">
+          <div class="card-title">🟦 Confusion Matrices — Side by Side</div>
+          <div class="cm-grid">
+            <div class="cm-box">
+              <div class="cm-title">Mammography (DM)</div>
+              <div class="cm-cells">
+                <div class="cm-cell cm-tp">
+                  471
+                  <div class="cm-lbl">TP</div>
+                </div>
+                <div class="cm-cell cm-fp">
+                  34
+                  <div class="cm-lbl">FP</div>
+                </div>
+                <div class="cm-cell cm-fn">
+                  64
+                  <div class="cm-lbl">FN</div>
+                </div>
+                <div class="cm-cell cm-tn">
+                  958
+                  <div class="cm-lbl">TN</div>
+                </div>
+              </div>
+            </div>
+            <div class="cm-box">
+              <div class="cm-title">Ultrasound (BUS)</div>
+              <div class="cm-cells">
+                <div class="cm-cell cm-tp">
+                  89
+                  <div class="cm-lbl">TP</div>
+                </div>
+                <div class="cm-cell cm-fp">
+                  5
+                  <div class="cm-lbl">FP</div>
+                </div>
+                <div class="cm-cell cm-fn">
+                  13
+                  <div class="cm-lbl">FN</div>
+                </div>
+                <div class="cm-cell cm-tn">
+                  23
+                  <div class="cm-lbl">TN</div>
+                </div>
+              </div>
+            </div>
+            <div class="cm-box">
+              <div class="cm-title">Fusion (Multimodal)</div>
+              <div class="cm-cells">
+                <div class="cm-cell cm-tp">
+                  92
+                  <div class="cm-lbl">TP</div>
+                </div>
+                <div class="cm-cell cm-fp">
+                  2
+                  <div class="cm-lbl">FP</div>
+                </div>
+                <div class="cm-cell cm-fn">
+                  3
+                  <div class="cm-lbl">FN</div>
+                </div>
+                <div class="cm-cell cm-tn">
+                  33
+                  <div class="cm-lbl">TN</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📋 Full Performance Metrics Table</div>
+          <table class="stat-table">
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Mammography (DM)</th>
+                <th>Ultrasound (BUS)</th>
+                <th>Multimodal Fusion ★</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>AUC</td>
+                <td>0.9839</td>
+                <td>0.9285</td>
+                <td class="highlight">0.9891</td>
+              </tr>
+              <tr>
+                <td>Accuracy</td>
+                <td>93.58%</td>
+                <td>86.15%</td>
+                <td class="highlight">96.15%</td>
+              </tr>
+              <tr>
+                <td>Sensitivity (Recall)</td>
+                <td>93.74%</td>
+                <td>63.89%</td>
+                <td class="highlight">91.67%</td>
+              </tr>
+              <tr>
+                <td>Specificity</td>
+                <td>93.27%</td>
+                <td>94.68%</td>
+                <td class="highlight">97.87%</td>
+              </tr>
+              <tr>
+                <td>Precision</td>
+                <td>96.57%</td>
+                <td>82.14%</td>
+                <td class="highlight">94.29%</td>
+              </tr>
+              <tr>
+                <td>F1-Score</td>
+                <td>0.9513</td>
+                <td>0.7188</td>
+                <td class="highlight">0.9296</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tab-history" style="display: none" class="fade-in">
+        <div class="card">
+          <div class="history-header-row">
+            <div>
+              <div style="font-size: 14px; font-weight: 600">
+                Prediction History
+              </div>
+              <div id="hist-count" class="fname">0 records</div>
+            </div>
+            <div style="display: flex; gap: 8px">
+              <button class="btn btn-outline btn-sm" onclick="clearHistory()">
+                🗑 Clear All
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="exportCSV()">
+                ⬇ Export CSV
+              </button>
+            </div>
+          </div>
+          <div class="hist-col-header">
+            <div>Patient ID</div>
+            <div>Result</div>
+            <div>Benign %</div>
+            <div>Malignant %</div>
+            <div>Date/Time</div>
+            <div>w₁</div>
+          </div>
+          <div id="history-list">
+            <div class="empty-state">
+              <div class="empty-icon">📋</div>
+              No predictions yet. Run a prediction to populate history.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-report" style="display: none" class="fade-in">
+        <div class="card" style="margin-bottom: 16px">
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px">
+            Export PDF Report
+          </div>
+          <p class="fname" style="margin-bottom: 16px">
+            Includes training curves, ROC analysis, confusion matrices, metrics
+            table, and prediction history
+          </p>
+
+          <div class="two-col">
+            <div>
+              <div class="section-title">Report Sections</div>
+              <div class="checkbox-list">
+                <label
+                  ><input type="checkbox" checked /> Training loss &amp;
+                  accuracy curves</label
+                >
+                <label
+                  ><input type="checkbox" checked /> AUC vs fusion weight
+                  sweep</label
+                >
+                <label
+                  ><input type="checkbox" checked /> Combined ROC curves</label
+                >
+                <label
+                  ><input type="checkbox" checked /> Confusion matrices (all
+                  3)</label
+                >
+                <label
+                  ><input type="checkbox" checked /> Full metrics table</label
+                >
+                <label
+                  ><input type="checkbox" checked /> Prediction history</label
+                >
+                <label
+                  ><input type="checkbox" checked /> Latest case
+                  visualization</label
+                >
+              </div>
+            </div>
+            <div>
+              <div class="section-title">Report Metadata</div>
+              <div class="field-col">
+                <div class="field">
+                  <label>Institution</label>
+                  <input type="text" value="CTBE" />
+                </div>
+                <div class="field">
+                  <label>Report Title</label>
+                  <input
+                    type="text"
+                    value="Multimodal Breast Cancer Classification Report"
+                  />
+                </div>
+                <div class="field">
+                  <label>Group / Author</label>
+                  <input
+                    type="text"
+                    id="report-author"
+                    placeholder="Group #2"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 20px">
+            <button
+              class="btn btn-primary"
+              onclick="generateReport()"
+              style="flex: 1; justify-content: center; padding: 13px"
+            >
+              📄 Generate &amp; Download PDF
+            </button>
+            <button
+              class="btn btn-outline"
+              onclick="previewReport()"
+              style="flex: 1; justify-content: center; padding: 13px"
+            >
+              👁 Preview Report
+            </button>
+          </div>
+        </div>
+
+        <div id="report-preview" style="display: none" class="card fade-in">
+          <div id="report-content"></div>
+        </div>
+      </div>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>
