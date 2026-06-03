@@ -1,7 +1,6 @@
 """
 backend/app.py
 Multimodal Breast Cancer Classification System — Flask Backend
-BMED 4244 · Spring 2026
 
 Dynamic Fusion Engine:
    fused_prob = w1 * mammo_prob + (1 - w1) * us_prob
@@ -76,7 +75,12 @@ def preprocess_image(file_storage) -> torch.Tensor:
 
 def get_malignant_prob(model: nn.Module, tensor: torch.Tensor) -> float:
     with torch.no_grad():
-        probs = softmax(model(tensor))
+        logits = model(tensor)
+        probs = softmax(logits)
+
+    print("Logits:", logits.cpu().numpy())
+    print("Probabilities:", probs.cpu().numpy())
+
     return probs[0, 1].item()
 
 # ─── DYNAMIC EVALUATION CALCULATOR ────────────────────────────────────────────

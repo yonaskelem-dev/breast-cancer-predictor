@@ -217,8 +217,9 @@ function displayResult(r) {
   // AI explanation text
   const expl =
     isMal ?
-      `<strong>⚠ Malignant Pattern Detected:</strong> The multimodal fusion model (w₁=${r.fw}) identified high-risk tissue characteristics. Mammography model malignancy score: ${r.mammoMalig.toFixed(1)}%. Ultrasound model malignancy score: ${r.usMalig.toFixed(1)}%. Fused probability: ${r.malignant.toFixed(1)}%. Clinical verification is strongly recommended.`
-    : `<strong>✓ Benign Pattern Identified:</strong> The fused ResNet-18 classifier (w₁=${r.fw}) found predominantly benign tissue characteristics. Mammography malignancy score: ${r.mammoMalig.toFixed(1)}%. Ultrasound malignancy score: ${r.usMalig.toFixed(1)}%. Fused malignancy probability: ${r.malignant.toFixed(1)}%. Routine monitoring advised as per clinical protocol.`;
+      `<strong>⚠ Malignant Pattern Detected:</strong> Fused malignancy probability: ${r.malignant.toFixed(1)}%. Clinical verification is strongly recommended.`
+    : `<strong>✓ Benign Pattern Identified:</strong> Fused malignancy probability: ${r.malignant.toFixed(1)}%. Routine monitoring advised as per clinical protocol.`;
+
   document.getElementById("ai-explanation").innerHTML = expl;
 
   document.getElementById("result-area").style.display = "block";
